@@ -31,7 +31,7 @@ async function initializeChat() {
   await createThread();
   
   // Welcome message
-  addMessageToDisplay('assistant', 'Hello! I\'m your AI assistant. How can I help you today?');
+  addMessageToDisplay('assistant', 'Hello!');
 }
 
 // Send a message and get a response
@@ -123,6 +123,14 @@ function displayErrorMessage(message) {
 // Scroll to the bottom of the chat
 function scrollToBottom() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
+  
+  // Additional check for mobile devices
+  if (window.innerWidth <= 768) {
+    // Extra delay needed on some mobile browsers
+    setTimeout(function() {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 100);
+  }
 }
 
 // Start a new chat
@@ -134,7 +142,7 @@ async function startNewChat() {
   await createThread();
   
   // Add welcome message
-  addMessageToDisplay('assistant', 'Hello! I\'m your AI assistant. How can I help you today?');
+  addMessageToDisplay('assistant', 'Hello! What are you calling me about?');
 }
 
 // Event listeners
