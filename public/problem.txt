@@ -1,0 +1,41 @@
+Your task is to solve the following problem:
+notation:
+verb | meaning
+write X |append X immediately after what you have
+prefix X / suffix X | prepend / append X
+delete X | remove all instances of the stated letter(s) (order irrelevant)
+replace P with Q | substitute every occurrence of P by Q
+reverse | spell the whole string backwards
+rotate k left | cyclically shift left k places
+Mirror‑cipher | Atbash (A↔Z, B↔Y, …, M↔N)
+Half‑turn Caesar | ROT‑13 (A→N, B→O, …, N→A)
+rearrange | anagram into an English word (keep capitals)
+Chemical symbols, postal / ISO codes, Roman numerals, Morse code, etc. are standard references.
+⸻
+▌ Gate 1 (element 80 + biochemistry + Mirror)
+    1.  write the chemical symbol of element 80.
+    2.  write the single‑letter amino‑acid code for phenylalanine.
+    3.  write the single‑letter amino‑acid code for tryptophan.
+    4.  write the chemical symbol of element 5.
+    5.  Apply the Mirror‑cipher to the 5‑letter string.
+    6.  Record the result as [ 1 ] (5 letters).
+⸻
+▌ Gate 2 (chemistry mash‑up)
+    1.  Keep only the first letter of [ 1 ].
+    2.  write the chemical symbol for oxygen.
+    3.  write the chemical symbol for carbon twice.
+    4.  write the letter that is most frequent in ordinary English text.
+    5.  write the single‑letter symbol that denotes electrical resistance.
+    6.  The 6‑letter string you now have is [ 2 ].
+⸻
+▌ Gate 3 (letter substitutions)
+    1.  Start with [ 2 ].
+    2.  replace every O with the 20‑th letter of the alphabet.
+    3.  replace every C with the 5‑th letter of the alphabet.
+    4.  Rearrange to an English 5‑letter word (apply the tie‑breaker). → [ 3 ]
+⸻
+▌ Gate 4 (mini‑splice)
+    1.  Start with [ 3 ] and keep only its first and last letters.
+    2.  suffix the chemical symbols for hydrogen and phosphorus (in that order).
+    3.  replace every 20‑th‑letter‑of‑the‑alphabet with the 9‑th‑letter.
+    4.  Rearrange to a 4‑letter English word (tie‑breaker). → [ 4 ]

@@ -226,15 +226,26 @@
     
     // Handle mobile input focus to prevent layout shifting
     const inputElement = document.getElementById('messageInput');
+    const header = document.querySelector('header');
+    let lastScrollPosition = 0;
     
     // Focus event to handle when keyboard appears
     inputElement.addEventListener('focus', function() {
       if (window.innerWidth <= 768) {
+        // Mark body with keyboard-open class
+        document.body.classList.add('keyboard-open');
+        
         // Set timeout to wait for keyboard to appear
         setTimeout(function() {
-          // Scroll to the bottom of the chat
-          const chatMessages = document.getElementById('chatMessages');
-          chatMessages.scrollTop = chatMessages.scrollHeight;
+          // Adjust scroll position to show both header and input area
+          const chatInputContainer = document.querySelector('.chat-input-container');
+          const headerHeight = header.offsetHeight;
+          const inputHeight = chatInputContainer.offsetHeight;
+          const viewportHeight = window.innerHeight;
+          
+          // Calculate and make sure at least header and input are visible
+          const scrollPosition = Math.max(0, window.scrollY - (viewportHeight - inputHeight - headerHeight - 100));
+          window.scrollTo(0, scrollPosition);
         }, 300);
       }
     });
@@ -242,8 +253,12 @@
     // Blur event to handle when keyboard disappears
     inputElement.addEventListener('blur', function() {
       if (window.innerWidth <= 768) {
-        // Scroll to bottom after keyboard disappears
+        // Remove keyboard-specific styles
+        document.body.classList.remove('keyboard-open');
+        
+        // Brief delay to let the keyboard animation complete
         setTimeout(function() {
+          // Refresh the chat messages scroll position
           const chatMessages = document.getElementById('chatMessages');
           chatMessages.scrollTop = chatMessages.scrollHeight;
         }, 100);

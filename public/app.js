@@ -31,7 +31,7 @@ async function initializeChat() {
   await createThread();
   
   // Welcome message
-  addMessageToDisplay('assistant', 'Hello!');
+  addMessageToDisplay('assistant', 'Hello! How can I help you today?');
 }
 
 // Send a message and get a response

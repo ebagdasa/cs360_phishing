@@ -109,6 +109,45 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Puzzle page route
+app.get('/puzzle', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'puzzle.html'));
+});
+
+// Puzzle answer verification endpoint
+app.post('/api/check-answer', (req, res) => {
+  const { answer } = req.body;
+  const correctAnswer = 13; // 3 + (2 × 5) = 3 + 10 = 13
+  
+  console.log('Received puzzle answer:', answer);
+  
+  if (!answer && answer !== 0) {
+    return res.status(400).json({ success: false, message: 'Please provide an answer' });
+  }
+  
+  // Convert to number and check
+  const numAnswer = parseInt(answer);
+  
+  if (isNaN(numAnswer)) {
+    return res.status(400).json({ success: false, message: 'Please provide a valid number' });
+  }
+  
+  if (numAnswer === correctAnswer) {
+    console.log('Correct puzzle answer provided');
+    return res.json({ 
+      success: true, 
+      message: 'Correct! Revealing the secret message...',
+      secretMessage: 'My name is Eugene'
+    });
+  } else {
+    console.log('Incorrect puzzle answer provided:', numAnswer);
+    return res.json({ 
+      success: false, 
+      message: 'Incorrect. Please try again.' 
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

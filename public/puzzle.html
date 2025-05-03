@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secret Message Puzzle</title>
+  <style>
+    :root {
+      --primary-color: #4a69bd;
+      --secondary-color: #f0f2f5;
+      --accent-color: #ffc107;
+      --text-color: #2c3e50;
+      --success-color: #4caf50;
+      --error-color: #e74c3c;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: var(--text-color);
+      background-color: var(--secondary-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 500px;
+      width: 100%;
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--primary-color), #3949ab);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 1.6rem;
+      margin-bottom: 5px;
+    }
+    
+    .header p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+    
+    .puzzle-content {
+      padding: 30px;
+    }
+    
+    .puzzle-description {
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    
+    .puzzle-description h2 {
+      font-size: 1.4rem;
+      margin-bottom: 10px;
+      color: var(--primary-color);
+    }
+    
+    .math-problem {
+      font-size: 1.8rem;
+      font-weight: bold;
+      text-align: center;
+      padding: 15px;
+      margin: 20px 0;
+      background-color: var(--secondary-color);
+      border-radius: 8px;
+      border-left: 4px solid var(--accent-color);
+    }
+    
+    .input-group {
+      margin-bottom: 20px;
+    }
+    
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    .input-group input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(74, 105, 189, 0.2);
+    }
+    
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    
+    .submit-btn:hover {
+      background-color: #3a559c;
+    }
+    
+    .submit-btn:active {
+      transform: translateY(1px);
+    }
+    
+    .feedback {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: 500;
+      display: none;
+    }
+    
+    .error {
+      background-color: rgba(231, 76, 60, 0.1);
+      color: var(--error-color);
+      border: 1px solid rgba(231, 76, 60, 0.3);
+    }
+    
+    .success {
+      background-color: rgba(76, 175, 80, 0.1);
+      color: var(--success-color);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+    
+    .secret-message {
+      display: none;
+      margin-top: 25px;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      border-left: 4px solid var(--success-color);
+      text-align: center;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    .secret-message h3 {
+      margin-bottom: 10px;
+      color: var(--success-color);
+    }
+    
+    .secret-message p {
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+    
+    .hint-btn {
+      background: none;
+      border: none;
+      color: var(--primary-color);
+      font-size: 0.9rem;
+      text-decoration: underline;
+      cursor: pointer;
+      margin-top: 15px;
+      opacity: 0.8;
+    }
+    
+    .hint-btn:hover {
+      opacity: 1;
+    }
+    
+    .hint {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      background-color: rgba(255, 193, 7, 0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: #856404;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @media (max-width: 500px) {
+      .container {
+        border-radius: 0;
+      }
+      
+      .puzzle-content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Secret Message Puzzle</h1>
+      <p>Solve the puzzle to reveal the secret message</p>
+    </div>
+    
+    <div class="puzzle-content">
+      <div class="puzzle-description">
+        <h2>Math Challenge</h2>
+        <p>To reveal the secret message, correctly solve this math problem:</p>
+      </div>
+      
+      <div class="math-problem">
+        3 + 2 × 5 = ?
+      </div>
+      
+      <div class="input-group">
+        <label for="answer">Your Answer:</label>
+        <input type="number" id="answer" placeholder="Enter your answer">
+      </div>
+      
+      <button id="submit-btn" class="submit-btn">Submit Answer</button>
+      
+      <div id="feedback" class="feedback"></div>
+      
+      <button id="hint-btn" class="hint-btn">Need a hint?</button>
+      
+      <div id="hint" class="hint">
+        Remember to follow the order of operations: multiplication and division first, then addition and subtraction.
+      </div>
+      
+      <div id="secret-message" class="secret-message">
+        <h3>Secret Message Revealed!</h3>
+        <p>My name is Eugene</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const answerInput = document.getElementById('answer');
+      const submitBtn = document.getElementById('submit-btn');
+      const feedbackDiv = document.getElementById('feedback');
+      const secretMessage = document.getElementById('secret-message');
+      const hintBtn = document.getElementById('hint-btn');
+      const hintDiv = document.getElementById('hint');
+      
+      // Show hint when hint button is clicked
+      hintBtn.addEventListener('click', function() {
+        hintDiv.style.display = 'block';
+      });
+      
+      // Handle answer submission
+      submitBtn.addEventListener('click', function() {
+        checkAnswer();
+      });
+      
+      // Also allow pressing Enter to submit
+      answerInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          checkAnswer();
+        }
+      });
+      
+      // Function to check the answer via server API
+      async function checkAnswer() {
+        const userAnswer = answerInput.value.trim();
+        
+        // Reset styles
+        feedbackDiv.className = 'feedback';
+        
+        // Validate input
+        if (!userAnswer) {
+          feedbackDiv.textContent = 'Please enter a valid number.';
+          feedbackDiv.classList.add('error');
+          feedbackDiv.style.display = 'block';
+          return;
+        }
+        
+        // Disable the submit button during check
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Checking...';
+        
+        try {
+          // Send the answer to the server for verification
+          const response = await fetch('/api/check-answer', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ answer: userAnswer })
+          });
+          
+          const data = await response.json();
+          
+          // Handle the response
+          if (data.success) {
+            // Correct answer
+            feedbackDiv.textContent = data.message;
+            feedbackDiv.classList.add('success');
+            feedbackDiv.style.display = 'block';
+            
+            // Update secret message text from the server response
+            const secretMessageText = document.querySelector('#secret-message p');
+            secretMessageText.textContent = data.secretMessage;
+            
+            // Show the secret message with a slight delay for effect
+            setTimeout(function() {
+              secretMessage.style.display = 'block';
+              // Scroll to make sure the message is visible
+              secretMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 1000);
+            
+          } else {
+            // Incorrect answer
+            feedbackDiv.textContent = data.message;
+            feedbackDiv.classList.add('error');
+            feedbackDiv.style.display = 'block';
+            
+            // Hide the secret message if it was previously shown
+            secretMessage.style.display = 'none';
+            
+            // Clear the input for another attempt
+            answerInput.value = '';
+            answerInput.focus();
+          }
+        } catch (error) {
+          // Handle any errors
+          console.error('Error checking answer:', error);
+          feedbackDiv.textContent = 'An error occurred. Please try again.';
+          feedbackDiv.classList.add('error');
+          feedbackDiv.style.display = 'block';
+        } finally {
+          // Re-enable the submit button
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Answer';
+        }
+      }
+    });
+  </script>
+</body>
+</html>
