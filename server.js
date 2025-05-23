@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const OpenAI = require('openai');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,6 +18,19 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Store threads in memory
 const threads = {};
+
+// Store user sessions
+const sessions = {};
+
+// Load the questions from the offline verifier file
+let puzzleQuestions;
+try {
+  const questionsData = fs.readFileSync(path.join(__dirname, 'public', 'offline_verifier_generation.json'), 'utf8');
+  puzzleQuestions = JSON.parse(questionsData);
+} catch (error) {
+  console.error('Error loading puzzle questions:', error);
+  puzzleQuestions = {};
+}
 
 // Create a new thread
 app.post('/api/threads', async (req, res) => {
@@ -114,37 +128,216 @@ app.get('/puzzle', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'puzzle.html'));
 });
 
+// Helper to generate a session ID
+const generateSessionId = () => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+// Helper to select random questions
+const getRandomQuestions = (count) => {
+  const selectedIds = [];
+  
+  // If there are fewer questions than requested, return all available questions
+  // const questionIds = Object.keys(puzzleQuestions);
+  // if (questionIds.length <= count) {
+  //   return questionIds.map(id => ({
+  //     id,
+  //     ...puzzleQuestions[id]
+  //   }));
+  // }
+  questionIds = ['1', '154', '157', '159', '165', '166', '167', '168', '171', '173', '174', '178', '180', '182', '184', '185', '190', '191', '192', '197', '200', '201', '202', '207', '208', '209', '212', '213'];
+  console.log('Selecting random questions');
+  console.log('Available question IDs:', questionIds);
+  
+  // Otherwise select 'count' random questions
+  while (selectedIds.length < count) {
+    const randomIndex = Math.floor(Math.random() * questionIds.length);
+    const randomId = questionIds[randomIndex];
+    
+    if (!selectedIds.includes(randomId)) {
+      selectedIds.push(randomId);
+    }
+  }
+  
+  return selectedIds.map(id => ({
+    id,
+    ...puzzleQuestions[id]
+  }));
+};
+
+// Get a puzzle question
+app.get('/api/get-puzzle', (req, res) => {
+  try {
+    // Generate a session ID if none exists
+    let sessionId = req.query.sessionId;
+    
+    // Get the number of questions parameter (default to 5)
+    const questionCount = parseInt(req.query.questionCount) || 5;
+    
+    // Get the required correct answers parameter (default to Math.ceil(questionCount * 0.4) or 2, whichever is higher)
+    const minCorrectToReveal = parseInt(req.query.minCorrect) || Math.max(2, Math.ceil(questionCount * 0.4));
+
+    if (!sessionId || !sessions[sessionId]) {
+      sessionId = generateSessionId();
+      
+      // Select the specified number of random questions for this session
+      const randomQuestions = getRandomQuestions(questionCount);
+      
+      // Initialize the session
+      sessions[sessionId] = {
+        questions: randomQuestions,
+        currentQuestionIndex: 0,
+        correctAnswers: 0,
+        completed: false,
+        minCorrectToReveal: minCorrectToReveal
+      };
+    }
+    
+    const session = sessions[sessionId];
+    
+    // If session is already completed, return appropriate message
+    if (session.completed) {
+      return res.json({
+        sessionId,
+        completed: true,
+        correctAnswers: session.correctAnswers,
+        totalQuestions: session.questions.length,
+        requiredCorrect: session.minCorrectToReveal,
+        secretRevealed: session.correctAnswers >= session.minCorrectToReveal,
+        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'My name is Eugene' : null
+      });
+    }
+    
+    // Get the current question
+    const currentQuestion = session.questions[session.currentQuestionIndex];
+    
+    // Process the question text to make it more compact and wider
+    let puzzleText = currentQuestion.question;
+    
+    // Remove extra horizontal lines if they exist
+    puzzleText = puzzleText.replace(/\u2500{20,}/g, '_____');
+    
+    // Remove extra blank lines (keep only single blank lines)
+    puzzleText = puzzleText.replace(/\n\s*\n\s*\n/g, '\n\n');
+    
+    // Format bullet points to be more compact
+    puzzleText = puzzleText.replace(/\u2022\s*([^\n]+)/g, '• $1');
+    
+    // Make the numbered lists more compact if they exist
+    puzzleText = puzzleText.replace(/(\d+)\.\s+([^\n]+)/g, '$1. $2');
+    
+    // Send the processed question text
+    res.json({
+      sessionId,
+      questionNumber: session.currentQuestionIndex + 1,
+      totalQuestions: session.questions.length,
+      requiredCorrect: session.minCorrectToReveal,
+      progress: {
+        correctAnswers: session.correctAnswers,
+        remainingQuestions: session.questions.length - session.currentQuestionIndex
+      },
+      puzzle: puzzleText
+    });
+  } catch (error) {
+    console.error('Error retrieving puzzle question:', error);
+    res.status(500).json({ error: 'Failed to get puzzle question' });
+  }
+});
+
 // Puzzle answer verification endpoint
 app.post('/api/check-answer', (req, res) => {
-  const { answer } = req.body;
-  const correctAnswer = 13; // 3 + (2 × 5) = 3 + 10 = 13
+  const { answer, sessionId } = req.body;
   
   console.log('Received puzzle answer:', answer);
   
-  if (!answer && answer !== 0) {
+  if (!answer) {
     return res.status(400).json({ success: false, message: 'Please provide an answer' });
   }
   
-  // Convert to number and check
-  const numAnswer = parseInt(answer);
-  
-  if (isNaN(numAnswer)) {
-    return res.status(400).json({ success: false, message: 'Please provide a valid number' });
+  if (!sessionId || !sessions[sessionId]) {
+    return res.status(400).json({ success: false, message: 'Invalid session. Please start a new puzzle.' });
   }
   
-  if (numAnswer === correctAnswer) {
-    console.log('Correct puzzle answer provided');
-    return res.json({ 
-      success: true, 
-      message: 'Correct! Revealing the secret message...',
-      secretMessage: 'My name is Eugene'
-    });
-  } else {
-    console.log('Incorrect puzzle answer provided:', numAnswer);
-    return res.json({ 
-      success: false, 
-      message: 'Incorrect. Please try again.' 
-    });
+  try {
+    const session = sessions[sessionId];
+    
+    // If session is already completed, return appropriate message
+    if (session.completed) {
+      return res.json({
+        success: true,
+        completed: true,
+        correctAnswers: session.correctAnswers,
+        totalQuestions: session.questions.length,
+        requiredCorrect: session.minCorrectToReveal,
+        secretRevealed: session.correctAnswers >= session.minCorrectToReveal,
+        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'My name is Eugene' : null,
+        message: session.correctAnswers >= session.minCorrectToReveal 
+          ? 'You have solved enough puzzles! The secret is revealed!' 
+          : `You have completed all puzzles, but did not solve enough correctly. You need at least ${session.minCorrectToReveal} correct answers.`
+      });
+    }
+    
+    // Get the current question
+    const currentQuestion = session.questions[session.currentQuestionIndex];
+    
+    // Get correct answer
+    const correctAnswer = currentQuestion.solution.toLowerCase().trim();
+    const userAnswer = answer.trim().toLowerCase();
+    
+    console.log('Correct answer:', correctAnswer);
+    console.log('User answer:', userAnswer);
+    
+    // Check if the answer is correct
+    const isCorrect = userAnswer === correctAnswer;
+    
+    if (isCorrect) {
+      console.log('Correct puzzle answer provided');
+      session.correctAnswers++;
+    } else {
+      console.log('Incorrect puzzle answer provided:', answer);
+    }
+    
+    // Move to the next question
+    session.currentQuestionIndex++;
+    
+    // Check if all questions have been answered
+    if (session.currentQuestionIndex >= session.questions.length) {
+      session.completed = true;
+      
+      return res.json({
+        success: true,
+        correct: isCorrect,
+        completed: true,
+        correctAnswers: session.correctAnswers,
+        totalQuestions: session.questions.length,
+        requiredCorrect: session.minCorrectToReveal,
+        secretRevealed: session.correctAnswers >= session.minCorrectToReveal,
+        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'My name is Eugene' : null,
+        message: session.correctAnswers >= session.minCorrectToReveal 
+          ? 'You have solved enough puzzles! The secret is revealed!' 
+          : `You have completed all puzzles, but did not solve enough correctly. You need at least ${session.minCorrectToReveal} correct answers.`
+      });
+    } else {
+      // Send information about the next question
+      const nextQuestion = session.questions[session.currentQuestionIndex];
+      
+      return res.json({
+        success: true,
+        correct: isCorrect,
+        message: isCorrect ? 'Correct! Moving to the next puzzle.' : 'Incorrect. Moving to the next puzzle.',
+        nextQuestion: {
+          questionNumber: session.currentQuestionIndex + 1,
+          totalQuestions: session.questions.length,
+          progress: {
+            correctAnswers: session.correctAnswers,
+            remainingQuestions: session.questions.length - session.currentQuestionIndex
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error checking answer:', error);
+    return res.status(500).json({ success: false, message: 'Error checking answer' });
   }
 });
 
