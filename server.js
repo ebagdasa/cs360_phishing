@@ -133,32 +133,28 @@ const generateSessionId = () => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-// Helper to select random questions
+// Helper to select random questions (without replacement)
 const getRandomQuestions = (count) => {
-  const selectedIds = [];
-  
-  // If there are fewer questions than requested, return all available questions
-  // const questionIds = Object.keys(puzzleQuestions);
-  // if (questionIds.length <= count) {
-  //   return questionIds.map(id => ({
-  //     id,
-  //     ...puzzleQuestions[id]
-  //   }));
-  // }
-  questionIds = ['1', '154', '157', '159', '165', '166', '167', '168', '171', '173', '174', '178', '180', '182', '184', '185', '190', '191', '192', '197', '200', '201', '202', '207', '208', '209', '212', '213'];
+  // Curated list (removed: '166', '167', '197')
+  const questionIds = ['1', '154', '157', '159', '165', '168', '171', '173', '174', '178', '180', '182', '184', '185', '190', '191', '192', '200', '201', '202', '207', '208', '209', '212', '213'];
   console.log('Selecting random questions');
   console.log('Available question IDs:', questionIds);
-  
-  // Otherwise select 'count' random questions
-  while (selectedIds.length < count) {
-    const randomIndex = Math.floor(Math.random() * questionIds.length);
-    const randomId = questionIds[randomIndex];
-    
-    if (!selectedIds.includes(randomId)) {
-      selectedIds.push(randomId);
-    }
+
+  // Filter to only IDs that actually exist in the loaded questions
+  const availableIds = questionIds.filter(id => Boolean(puzzleQuestions[id]));
+
+  // Guard against requesting more than available
+  const take = Math.min(count, availableIds.length);
+
+  // Fisher–Yates shuffle for unbiased sampling without replacement
+  const ids = availableIds.slice();
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
   }
-  
+
+  const selectedIds = ids.slice(0, take);
+
   return selectedIds.map(id => ({
     id,
     ...puzzleQuestions[id]
@@ -175,7 +171,7 @@ app.get('/api/get-puzzle', (req, res) => {
     const questionCount = parseInt(req.query.questionCount) || 5;
     
     // Get the required correct answers parameter (default to Math.ceil(questionCount * 0.4) or 2, whichever is higher)
-    const minCorrectToReveal = parseInt(req.query.minCorrect) || Math.max(2, Math.ceil(questionCount * 0.4));
+    const minCorrectToReveal = parseInt(req.query.minCorrect);
 
     if (!sessionId || !sessions[sessionId]) {
       sessionId = generateSessionId();
@@ -204,7 +200,7 @@ app.get('/api/get-puzzle', (req, res) => {
         totalQuestions: session.questions.length,
         requiredCorrect: session.minCorrectToReveal,
         secretRevealed: session.correctAnswers >= session.minCorrectToReveal,
-        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'My name is Eugene' : null
+        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'We are currently clean on OPSEC' : null
       });
     }
     
@@ -270,7 +266,7 @@ app.post('/api/check-answer', (req, res) => {
         totalQuestions: session.questions.length,
         requiredCorrect: session.minCorrectToReveal,
         secretRevealed: session.correctAnswers >= session.minCorrectToReveal,
-        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'My name is Eugene' : null,
+        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'We are currently clean on OPSEC' : null,
         message: session.correctAnswers >= session.minCorrectToReveal 
           ? 'You have solved enough puzzles! The secret is revealed!' 
           : `You have completed all puzzles, but did not solve enough correctly. You need at least ${session.minCorrectToReveal} correct answers.`
@@ -312,7 +308,7 @@ app.post('/api/check-answer', (req, res) => {
         totalQuestions: session.questions.length,
         requiredCorrect: session.minCorrectToReveal,
         secretRevealed: session.correctAnswers >= session.minCorrectToReveal,
-        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'My name is Eugene' : null,
+        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'We are currently clean on OPSEC' : null,
         message: session.correctAnswers >= session.minCorrectToReveal 
           ? 'You have solved enough puzzles! The secret is revealed!' 
           : `You have completed all puzzles, but did not solve enough correctly. You need at least ${session.minCorrectToReveal} correct answers.`
@@ -339,6 +335,10 @@ app.post('/api/check-answer', (req, res) => {
     console.error('Error checking answer:', error);
     return res.status(500).json({ success: false, message: 'Error checking answer' });
   }
+});
+
+app.get('/api/get-secret-message', (req, res) => {
+  res.json({ secretMessage: 'We are currently clean on OPSEC' });
 });
 
 app.listen(port, () => {

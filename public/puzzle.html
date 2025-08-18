@@ -481,22 +481,79 @@
       const totalQuestionsSpan = document.getElementById('total-questions');
       const correctAnswersSpan = document.getElementById('correct-answers');
       const currentQuestionNumberSpan = document.getElementById('current-question-number');
+      const inputGroup = document.querySelector('.input-group');
       
       // Track session
       let sessionId = null;
       
       // Get URL query parameters
       const urlParams = new URLSearchParams(window.location.search);
+      const questionCountParam = urlParams.get('questions');
       const questionCount = urlParams.get('questions') || 5;
       const minCorrect = urlParams.get('minCorrect');
-      
-      // Display the required info in the UI
-      document.querySelector('.puzzle-description p').innerHTML = 
-        `Solve the puzzles below. You need to solve at least <span id="required-correct">${minCorrect || 'loading...'}</span> out of 
-        <span id="total-questions">${questionCount}</span> puzzles correctly to unlock the secret message.`;
-      
-      // Fetch the riddle from the server when the page loads
-      fetchRiddle();
+
+      if (questionCountParam === '0') {
+        // Special case: 0 questions, just show a button to reveal the message.
+        document.getElementById('progress-info').style.display = 'none';
+        document.getElementById('riddle-container').style.display = 'none';
+        document.querySelector('.input-group').style.display = 'none';
+        
+        submitBtn.textContent = 'Reveal the Secret Message';
+        
+        submitBtn.addEventListener('click', async function() {
+          try {
+            const response = await fetch('/api/get-secret-message');
+            const data = await response.json();
+            if (data.secretMessage) {
+              document.querySelector('#secret-message p').textContent = data.secretMessage;
+            }
+          } catch (error) {
+            console.error('Error fetching secret message:', error);
+            document.querySelector('#secret-message p').textContent = 'Could not load the secret message.';
+          }
+          secretMessage.style.display = 'block';
+          secretMessage.scrollIntoView({ behavior: 'smooth' });
+          this.style.display = 'none'; // Hide button after clicking
+        });
+      } else {
+        // Display the required info in the UI
+        document.querySelector('.puzzle-description p').innerHTML = 
+          `Solve the puzzles below. You need to solve at least <span id="required-correct">${minCorrect || 'loading...'}</span> out of 
+          <span id="total-questions">${questionCount}</span> puzzles correctly to unlock the secret message.`;
+        
+        // Fetch the riddle from the server when the page loads
+        fetchRiddle();
+
+        // Convert input to lowercase
+        answerInput.addEventListener('input', function() {
+          this.value = this.value.toLowerCase();
+        });
+        
+        // Allow Enter key to submit
+        answerInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            checkAnswer();
+            e.preventDefault();
+          }
+        });
+        
+        // Handle answer submission
+        submitBtn.addEventListener('click', function() {
+          checkAnswer();
+        });
+      }
+
+      function restoreForm() {
+        inputGroup.style.display = 'block';
+        submitBtn.disabled = false;
+        const currentNum = questionNumberSpan.textContent;
+        submitBtn.innerHTML = `Submit Answer for Question <span id="current-question-number">${currentNum}</span>`;
+        
+        const newSpan = document.getElementById('current-question-number');
+        if (newSpan) {
+          newSpan.textContent = currentNum;
+        }
+      }
       
       async function fetchRiddle() {
         try {
@@ -596,6 +653,7 @@
           
           // Clear any previous input
           clearInput();
+          restoreForm();
         } catch (error) {
           console.error('Error fetching riddle:', error);
           loadingIndicator.style.display = 'none';
@@ -627,35 +685,12 @@
           secretMessage.style.display = 'block';
         }
       }
-      
+
       // Helper to clear input
       function clearInput() {
         answerInput.value = '';
       }
       
-      // Show hint when hint button is clicked
-      // hintBtn.addEventListener('click', function() {
-      //   hintDiv.style.display = 'block';
-      //   hintBtn.style.display = 'none';
-      // });
-      
-      // Convert input to lowercase
-      answerInput.addEventListener('input', function() {
-        this.value = this.value.toLowerCase();
-      });
-      
-      // Allow Enter key to submit
-      answerInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          checkAnswer();
-          e.preventDefault();
-        }
-      });
-      
-      // Handle answer submission
-      submitBtn.addEventListener('click', function() {
-        checkAnswer();
-      });
       
       // Function to check the answer via server API
       async function checkAnswer() {
@@ -676,6 +711,7 @@
         // Disable the submit button during check
         submitBtn.disabled = true;
         submitBtn.innerHTML = 'Checking...';
+        inputGroup.style.display = 'none';
         
         try {
           // Send the answer to the server for verification
@@ -729,15 +765,6 @@
                 questionNumberSpan.textContent = nextQuestionNum;
                 correctAnswersSpan.textContent = data.nextQuestion.progress.correctAnswers;
                 
-                // Completely reset the button HTML to ensure the question number updates correctly
-                submitBtn.innerHTML = `Submit Answer for Question <span id="current-question-number">${nextQuestionNum}</span>`;
-                
-                // Reacquire the span since we recreated it
-                const newSpan = document.getElementById('current-question-number');
-                if (newSpan) {
-                  newSpan.textContent = nextQuestionNum;
-                }
-                
                 // Reset the form for the next question
                 clearInput();
                 feedbackDiv.style.display = 'none';
@@ -755,6 +782,7 @@
             
             // Clear input for another attempt
             clearInput();
+            restoreForm();
           }
         } catch (error) {
           // Handle any errors
@@ -762,22 +790,7 @@
           feedbackDiv.textContent = 'An error occurred. Please try again.';
           feedbackDiv.classList.add('error');
           feedbackDiv.style.display = 'block';
-        } finally {
-          // Re-enable the submit button
-          submitBtn.disabled = false;
-          
-          // Get the current question number that should be displayed
-          const currentNum = questionNumberSpan.textContent;
-          
-          // Update the button text with the current question number
-          submitBtn.innerHTML = `Submit Answer for Question <span id="current-question-number">${currentNum}</span>`;
-          
-          // Reacquire the span since we recreated it
-          const newSpan = document.getElementById('current-question-number');
-          if (newSpan) {
-            // This ensures the span has the correct value
-            newSpan.textContent = currentNum;
-          }
+          restoreForm();
         }
       }
     });
