@@ -25,7 +25,7 @@ const sessions = {};
 // Load the questions from the offline verifier file
 let puzzleQuestions;
 try {
-  const questionsData = fs.readFileSync(path.join(__dirname, 'public', 'offline_verifier_generation.json'), 'utf8');
+  const questionsData = fs.readFileSync(path.join(__dirname, 'public', 'new_offline_verifier_generation.json'), 'utf8');
   puzzleQuestions = JSON.parse(questionsData);
 } catch (error) {
   console.error('Error loading puzzle questions:', error);
@@ -136,7 +136,7 @@ const generateSessionId = () => {
 // Helper to select random questions (without replacement)
 const getRandomQuestions = (count) => {
   // Curated list (removed: '166', '167', '197')
-  const questionIds = ['1', '154', '157', '159', '165', '168', '171', '173', '174', '178', '180', '182', '184', '185', '190', '191', '192', '200', '201', '202', '207', '208', '209', '212', '213'];
+  const questionIds = ['1', '154', '157', '159', '165',  '171', '173', '174', '178', '180', '182', '184', '185', '190', '191', '192', '200', '201', '202', '207', '208', '209', '212', '213'];
   console.log('Selecting random questions');
   console.log('Available question IDs:', questionIds);
 
