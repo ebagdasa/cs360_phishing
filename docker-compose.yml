@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  puzzle-http-server:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./public:/app/public:ro
+    command: ["python", "puzzle_http_server.py", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  puzzle-websocket-server:
+    build: .
+    ports:
+      - "8765:8765"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./public:/app/public:ro
+    command: ["python", "puzzle_websocket_server.py", "--host", "0.0.0.0", "--port", "8765"]
+    restart: unless-stopped
+
+  puzzle-stdio-server:
+    build: .
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./public:/app/public:ro
+    command: ["python", "puzzle_mcp_server.py"]
+    restart: unless-stopped
+    # This service doesn't expose ports as it uses stdio
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - puzzle-http-server
+      - puzzle-websocket-server
+    restart: unless-stopped

@@ -593,6 +593,13 @@
             return;
           }
           
+          // If secret is already revealed (from previous progress), show it immediately
+          if (data.secretRevealed && data.secretMessage) {
+            const secretMessageText = document.querySelector('#secret-message p');
+            secretMessageText.textContent = data.secretMessage;
+            secretMessage.style.display = 'block';
+          }
+
           // Update progress info
           questionNumberSpan.textContent = data.questionNumber;
           document.querySelectorAll('#total-questions').forEach(el => el.textContent = data.totalQuestions);
@@ -735,6 +742,15 @@
             feedbackDiv.classList.add(data.correct ? 'success' : 'error');
             feedbackDiv.style.display = 'block';
             
+            // If the server says the secret is revealed (early), show it right away
+            if (data.secretRevealed && data.secretMessage) {
+              const secretMessageText = document.querySelector('#secret-message p');
+              secretMessageText.textContent = data.secretMessage;
+              // Show immediately without waiting for completion
+              secretMessage.style.display = 'block';
+              secretMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
             // Handle session completion
             if (data.completed) {
               // Update current stats
@@ -763,7 +779,12 @@
                 // Update progress display
                 const nextQuestionNum = data.nextQuestion.questionNumber;
                 questionNumberSpan.textContent = nextQuestionNum;
-                correctAnswersSpan.textContent = data.nextQuestion.progress.correctAnswers;
+                // Prefer top-level correctAnswers from server if provided
+                if (typeof data.correctAnswers === 'number') {
+                  correctAnswersSpan.textContent = data.correctAnswers;
+                } else {
+                  correctAnswersSpan.textContent = data.nextQuestion.progress.correctAnswers;
+                }
                 
                 // Reset the form for the next question
                 clearInput();

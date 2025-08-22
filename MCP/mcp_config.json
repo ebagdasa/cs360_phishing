@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "puzzle-server": {
+      "command": "python",
+      "args": ["puzzle_mcp_server.py"],
+      "cwd": "/path/to/your/project/MCP"
+    }
+  }
+}

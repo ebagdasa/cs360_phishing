@@ -189,18 +189,20 @@ app.get('/api/get-puzzle', (req, res) => {
       };
     }
     
-    const session = sessions[sessionId];
+  const session = sessions[sessionId];
+  const hasValidThreshold = Number.isFinite(session.minCorrectToReveal) && session.minCorrectToReveal > 0;
+  const reachedThreshold = hasValidThreshold && session.correctAnswers >= session.minCorrectToReveal;
     
     // If session is already completed, return appropriate message
-    if (session.completed) {
+  if (session.completed) {
       return res.json({
         sessionId,
         completed: true,
         correctAnswers: session.correctAnswers,
         totalQuestions: session.questions.length,
         requiredCorrect: session.minCorrectToReveal,
-        secretRevealed: session.correctAnswers >= session.minCorrectToReveal,
-        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'We are currently clean on OPSEC' : null
+    secretRevealed: hasValidThreshold && session.correctAnswers >= session.minCorrectToReveal,
+    secretMessage: hasValidThreshold && session.correctAnswers >= session.minCorrectToReveal ? 'We are currently clean on OPSEC' : null
       });
     }
     
@@ -228,6 +230,8 @@ app.get('/api/get-puzzle', (req, res) => {
       questionNumber: session.currentQuestionIndex + 1,
       totalQuestions: session.questions.length,
       requiredCorrect: session.minCorrectToReveal,
+  secretRevealed: reachedThreshold,
+  secretMessage: reachedThreshold ? 'We are currently clean on OPSEC' : null,
       progress: {
         correctAnswers: session.correctAnswers,
         remainingQuestions: session.questions.length - session.currentQuestionIndex
@@ -296,6 +300,10 @@ app.post('/api/check-answer', (req, res) => {
     // Move to the next question
     session.currentQuestionIndex++;
     
+    // Determine if we've reached the threshold for early reveal (only when required > 0)
+    const hasValidThreshold = Number.isFinite(session.minCorrectToReveal) && session.minCorrectToReveal > 0;
+    const reachedThreshold = hasValidThreshold && session.correctAnswers >= session.minCorrectToReveal;
+
     // Check if all questions have been answered
     if (session.currentQuestionIndex >= session.questions.length) {
       session.completed = true;
@@ -307,9 +315,9 @@ app.post('/api/check-answer', (req, res) => {
         correctAnswers: session.correctAnswers,
         totalQuestions: session.questions.length,
         requiredCorrect: session.minCorrectToReveal,
-        secretRevealed: session.correctAnswers >= session.minCorrectToReveal,
-        secretMessage: session.correctAnswers >= session.minCorrectToReveal ? 'We are currently clean on OPSEC' : null,
-        message: session.correctAnswers >= session.minCorrectToReveal 
+        secretRevealed: hasValidThreshold && session.correctAnswers >= session.minCorrectToReveal,
+        secretMessage: hasValidThreshold && session.correctAnswers >= session.minCorrectToReveal ? 'We are currently clean on OPSEC' : null,
+        message: hasValidThreshold && session.correctAnswers >= session.minCorrectToReveal 
           ? 'You have solved enough puzzles! The secret is revealed!' 
           : `You have completed all puzzles, but did not solve enough correctly. You need at least ${session.minCorrectToReveal} correct answers.`
       });
@@ -320,7 +328,14 @@ app.post('/api/check-answer', (req, res) => {
       return res.json({
         success: true,
         correct: isCorrect,
-        message: isCorrect ? 'Correct! Moving to the next puzzle.' : 'Incorrect. Moving to the next puzzle.',
+        message: reachedThreshold
+          ? (isCorrect ? 'Correct! You reached the required correct answers. The secret is revealed! Moving to the next puzzle.'
+                        : 'Incorrect. Moving to the next puzzle.')
+          : (isCorrect ? 'Correct! Moving to the next puzzle.' : 'Incorrect. Moving to the next puzzle.'),
+        requiredCorrect: session.minCorrectToReveal,
+        correctAnswers: session.correctAnswers,
+        secretRevealed: reachedThreshold,
+        secretMessage: reachedThreshold ? 'We are currently clean on OPSEC' : null,
         nextQuestion: {
           questionNumber: session.currentQuestionIndex + 1,
           totalQuestions: session.questions.length,
